@@ -85,7 +85,7 @@ if (isset($_POST['inserer'])) {
         // INSERT : Nouveau CR
         // On ne spécifie pas 'num' car il est auto-incrémenté
         $requete_insert = "INSERT INTO cr (num_utilisateur, date, description, datetime, vu) 
-                          VALUES ('$id_utilisateur', '$date', '$descriptif', NOW(), 0)";
+                          VALUES ('$id_utilisateur', '$date', '$descriptif', NOW(), DEFAULT)";
         
         if (mysqli_query($bdd, $requete_insert)) {
             $message = "<p style='color:green;'>✅ Compte rendu créé avec succès !</p>";
