@@ -1,0 +1,20 @@
+/* menueleve.css - Menu spécifique élève */
+.menu-eleve {
+    background: #27ae60 !important;
+}
+
+.menu-eleve .menu-link {
+    background: #2ecc71;
+}
+
+.menu-eleve .menu-link:hover {
+    background: #27ae60;
+}
+
+.menu-eleve .menu-link.logout {
+    background: #c0392b;
+}
+
+.menu-eleve .menu-link.logout:hover {
+    background: #e74c3c;
+}

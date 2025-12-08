@@ -1,92 +1,103 @@
+
 <?php
-session_start();
-include "conf.php";
+session_start(); 
+include '_conf.php';
 
-// Connexion BDD
-$bdd = mysqli_connect($serveurBDD, $userBDD, $mdpBDD, $nomBDD);
-if (!$bdd) {
-    die("Erreur de connexion BDD : " . mysqli_connect_error());
-}
-
-// Déconnexion
-if (isset($_POST['deconnexion'])) {
-    session_destroy();
-    echo "Deconnexion effectuee. Merci de votre visite !<br>";
-    echo '<a href="index.php">Retour a l\'accueil</a>';
-    exit;
-}
-
-// Connexion
-if (isset($_POST['send_con'])) {
-    $login = mysqli_real_escape_string($bdd, $_POST['login']);
+// Gestion de la connexion
+if (isset($_POST['envoi'])) {
+    $login = $_POST['login'];
     $mdp = md5($_POST['mdp']);
-
-    $requete = "SELECT * FROM utilisateur WHERE login='$login' AND motdepasse='$mdp' LIMIT 1";
-    $resultat = mysqli_query($bdd, $requete);
-
-    if (!$resultat) {
-        die("Erreur SQL : " . mysqli_error($bdd));
+    
+    $connexion = mysqli_connect($serveurBDD,$userBDD,$mdpBDD,$nomBDD);
+    $requete="SELECT * FROM utilisateur WHERE login = '$login' AND motdepasse = '$mdp'";
+    $resultat = mysqli_query($connexion, $requete);
+    $trouve=0;
+    
+    while($donnees = mysqli_fetch_assoc($resultat)) {
+        $trouve=1;
+        $_SESSION["id"] = $donnees['num'];
+        $_SESSION["login"] = $donnees['login'];
+        $_SESSION["type"] = $donnees['type'];
+        $_SESSION["prenom"] = $donnees['prenom'];
+        $_SESSION["nom"] = $donnees['nom'];
     }
-
-    if (mysqli_num_rows($resultat) === 1) {
-        $user = mysqli_fetch_assoc($resultat);
-        $_SESSION['Sid'] = $user['num'];
-        $_SESSION['Slogin'] = $user['login'];
-        $_SESSION['Stype'] = $user['type'];
-        echo "Connexion reussie !<br>";
-    } else {
-        echo "Erreur de login ou mot de passe.<br>";
+    
+    if($trouve==0) {
+        $error_message = "Erreur de connexion : login ou mot de passe incorrect.";
     }
 }
 
-// Vérification session
-if (isset($_SESSION['Sid'])) {
-    ?>
-    <!DOCTYPE html>
-    <html lang="fr">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Accueil</title>
-        <link rel="stylesheet" href="css/menu.css">
-    </head>
-    <body>
-        <?php
-        // Inclusion du menu selon le type d'utilisateur
-        if ($_SESSION['Stype'] == 2) {
-            include 'menu_eleve.php';
-        } elseif ($_SESSION['Stype'] == 1) {
-            include 'menu_prof.php';
-        }
-        ?>
-        
-        <div class="main-content">
-            <?php
-            // PARTIE ELEVE
-            if ($_SESSION['Stype'] == 2) {
-                $id = $_SESSION['Sid'];
-                $requete = "SELECT prenom FROM utilisateur WHERE num='$id'";
-                $resultat = mysqli_query($bdd, $requete);
-                $user = mysqli_fetch_assoc($resultat);
-                $prenom = $user['prenom'] ?? $_SESSION['Slogin'];
-                ?>
-                <h1>Bienvenue <?php echo htmlspecialchars($prenom); ?> !</h1>
-                <p>Vous êtes connecté en tant qu'élève.</p>
-                <?php
-            }
-            // PARTIE PROF
-            elseif ($_SESSION['Stype'] == 1) {
-                ?>
-                <h1>Bienvenue <?php echo htmlspecialchars($_SESSION['Slogin']); ?> !</h1>
-                <p>Vous êtes connecté en tant que professeur.</p>
-                <?php
-            }
-            ?>
-        </div>
-    </body>
-    </html>
-    <?php
-} else {
-    echo "La connexion est perdue, veuillez revenir à la <a href='index.php'>page d'index</a>.";
+// Vérification de la session
+if (!isset($_SESSION["login"])) {
+    header("Location: index.php");
+    exit();
 }
 ?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accueil - Suivi Stages</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/menu.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <?php if($_SESSION["type"]==0): ?>
+        <link rel="stylesheet" href="css/menueleve.css">
+    <?php else: ?>
+        <link rel="stylesheet" href="css/menuprof.css">
+    <?php endif; ?>
+</head>
+<body>
+    <?php if($_SESSION["type"]==0): ?>
+        <?php include '_menuEleve.php'; ?>
+    <?php else: ?>
+        <?php include '_menuProf.php'; ?>
+    <?php endif; ?>
+    
+    <div class="container">
+        <?php if (isset($error_message)): ?>
+            <div class="message error"><?php echo $error_message; ?></div>
+        <?php endif; ?>
+        
+        <div class="welcome-section">
+            <h1>Bienvenue <?php echo $_SESSION["prenom"] . " " . $_SESSION["nom"]; ?></h1>
+            <p>Vous êtes connecté en tant que <?php echo ($_SESSION["type"]==0 ? "élève" : "professeur"); ?></p>
+        </div>
+        
+        <div class="info-cards">
+            <?php if($_SESSION["type"]==0): ?>
+                <div class="info-card">
+                    <h3>Compte-rendus</h3>
+                    <p>Consultez et gérez vos comptes-rendus de stage</p>
+                    <a href="cr.php" class="btn btn-primary">Voir mes CR</a>
+                </div>
+                
+                <div class="info-card">
+                    <h3>Profil</h3>
+                    <p>Modifiez vos informations personnelles</p>
+                    <a href="perso.php" class="btn btn-primary">Modifier mon profil</a>
+                </div>
+                
+                <div class="info-card">
+                    <h3>Nouveau CR</h3>
+                    <p>Créez un nouveau compte-rendu de stage</p>
+                    <a href="ccr.php" class="btn btn-primary">Créer un CR</a>
+                </div>
+            <?php else: ?>
+                <div class="info-card">
+                    <h3>Compte-rendus élèves</h3>
+                    <p>Consultez les comptes-rendus de tous les élèves</p>
+                    <a href="cr.php" class="btn btn-primary">Voir tous les CR</a>
+                </div>
+                
+                <div class="info-card">
+                    <h3>Profil</h3>
+                    <p>Modifiez vos informations personnelles</p>
+                    <a href="perso.php" class="btn btn-primary">Modifier mon profil</a>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</body>
+</html>

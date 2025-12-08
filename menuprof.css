@@ -1,0 +1,20 @@
+/* menuprof.css - Menu spécifique prof */
+.menu-prof {
+    background: #8e44ad !important;
+}
+
+.menu-prof .menu-link {
+    background: #9b59b6;
+}
+
+.menu-prof .menu-link:hover {
+    background: #8e44ad;
+}
+
+.menu-prof .menu-link.logout {
+    background: #c0392b;
+}
+
+.menu-prof .menu-link.logout:hover {
+    background: #e74c3c;
+}

@@ -1,0 +1,33 @@
+/* oubli.css - Page mot de passe oublié */
+.oubli-body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+}
+
+.oubli-container {
+    width: 100%;
+    max-width: 400px;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    padding: 40px;
+    text-align: center;
+}
+
+.oubli-header {
+    margin-bottom: 30px;
+}
+
+.oubli-header h1 {
+    color: #c0392b;
+    font-size: 28px;
+    margin-bottom: 10px;
+}
+
+.oubli-header p {
+    color: #7f8c8d;
+    font-size: 16px;
+}

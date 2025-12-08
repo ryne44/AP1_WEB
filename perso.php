@@ -1,71 +1,137 @@
+
 <?php
-session_start();
-include 'conf.php';
+session_start(); 
+include '_conf.php';
 
-// Vérification de connexion
-if (!isset($_SESSION['Sid'])) {
-    echo "⚠️ Accès refusé. <a href='index.php'>Connectez-vous</a>";
-    exit;
+if (!isset($_SESSION["login"])) {
+    header("Location: index.php");
+    exit();
 }
 
-$bdd = mysqli_connect($serveurBDD, $userBDD, $mdpBDD, $nomBDD);
-if (!$bdd) {
-    die("Erreur connexion BDD : " . mysqli_connect_error());
-}
+$message = '';
+$message_type = '';
 
-$id = $_SESSION['Sid'];
-$message = "";
-
-// ===== 1. MISE À JOUR INFOS =====
-if (isset($_POST['update'])) {
-    $email = mysqli_real_escape_string($bdd, $_POST['email']);
-    $old_mdp = md5($_POST['old_mdp']);
-    $new_mdp = md5($_POST['new_mdp']);
-
-    // Vérifie que l'ancien mot de passe est bon
-    $check = mysqli_query($bdd, "SELECT * FROM utilisateur WHERE num='$id' AND motdepasse='$old_mdp'");
-    if (mysqli_num_rows($check) == 1) {
-        $sql = "UPDATE utilisateur SET email='$email', motdepasse='$new_mdp' WHERE num='$id'";
-        if (mysqli_query($bdd, $sql)) {
-            $message = "<p style='color:green;'>✅ Informations mises à jour avec succès.</p>";
-        } else {
-            $message = "<p style='color:red;'>❌ Erreur lors de la mise à jour.</p>";
-        }
+if (isset($_POST['envoi_info'])) {
+    $nom = $_POST['nom'];
+    $prenom = $_POST['prenom'];
+    $tel = $_POST['tel'];
+    $login = $_POST['login'];
+    $email = $_POST['email'];
+    $id = $_SESSION['id'];
+    
+    $connexion = mysqli_connect($serveurBDD,$userBDD,$mdpBDD,$nomBDD);
+    $requete = "UPDATE utilisateur SET 
+                nom = '$nom', 
+                prenom = '$prenom', 
+                tel = '$tel', 
+                login = '$login', 
+                email = '$email' 
+                WHERE num = $id";
+    
+    if(mysqli_query($connexion,$requete)) {
+        $message = "Votre profil a été mis à jour avec succès.";
+        $message_type = 'success';
+        $_SESSION["prenom"] = $prenom;
+        $_SESSION["nom"] = $nom;
     } else {
-        $message = "<p style='color:red;'>❌ Ancien mot de passe incorrect.</p>";
+        $message = "Erreur lors de la mise à jour de votre profil.";
+        $message_type = 'error';
     }
 }
 
-// ===== 2. RÉCUPÉRATION DES INFOS =====
-$result = mysqli_query($bdd, "SELECT * FROM utilisateur WHERE num='$id'");
-$user = mysqli_fetch_assoc($result);
-?>
+$id = $_SESSION["id"];
+$connexion = mysqli_connect($serveurBDD,$userBDD,$mdpBDD,$nomBDD);
+$requete = "SELECT * FROM utilisateur WHERE num = '$id'";
+$resultat = mysqli_query($connexion, $requete);
+$donnees = mysqli_fetch_assoc($resultat);
 
+$nom = $donnees['nom'];
+$prenom = $donnees['prenom'];
+$tel = $donnees['tel'];
+$login = $donnees['login'];
+$email = $donnees['email'];
+?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Mes informations</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Profil - Suivi Stages</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/menu.css">
+    <?php if($_SESSION["type"]==0): ?>
+        <link rel="stylesheet" href="css/menueleve.css">
+    <?php else: ?>
+        <link rel="stylesheet" href="css/menuprof.css">
+    <?php endif; ?>
+    <link rel="stylesheet" href="css/formulaire.css">
 </head>
 <body>
-    <h2>Informations personnelles de <?php echo htmlspecialchars($_SESSION['Slogin']); ?></h2>
-
-    <?php echo $message; ?>
-
-    <form method="post" action="">
-        <label>Email :</label><br>
-        <input type="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>" required><br><br>
-
-        <label>Ancien mot de passe :</label><br>
-        <input type="password" name="old_mdp" required><br><br>
-
-        <label>Nouveau mot de passe :</label><br>
-        <input type="password" name="new_mdp" required><br><br>
-
-        <button type="submit" name="update">Mettre à jour</button>
-    </form>
-
-    <br>
-    <a href="accueil.php">⬅ Retour à l'accueil</a>
+    <div class="main-container">
+        <?php if($_SESSION["type"]==0): ?>
+            <?php include '_menuEleve.php'; ?>
+        <?php else: ?>
+            <?php include '_menuProf.php'; ?>
+        <?php endif; ?>
+        
+        <div class="content-center">
+            <div class="form-card">
+                <div class="form-header">
+                    <h1>Mon profil</h1>
+                    <p>Modifiez vos informations personnelles</p>
+                </div>
+                
+                <?php if ($message): ?>
+                    <div class="alert alert-<?php echo $message_type; ?>">
+                        <?php echo $message; ?>
+                    </div>
+                <?php endif; ?>
+                
+                <form action="perso.php" method="post">
+                    <div class="form-group">
+                        <label class="form-label">Nom :</label>
+                        <input type="text" name="nom" class="form-control" 
+                               value="<?php echo htmlspecialchars($nom); ?>" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Prénom :</label>
+                        <input type="text" name="prenom" class="form-control" 
+                               value="<?php echo htmlspecialchars($prenom); ?>" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Téléphone :</label>
+                        <input type="tel" name="tel" class="form-control" 
+                               value="<?php echo htmlspecialchars($tel); ?>" 
+                               placeholder="Ex: 0612345678">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Nom d'utilisateur :</label>
+                        <input type="text" name="login" class="form-control" 
+                               value="<?php echo htmlspecialchars($login); ?>" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Adresse email :</label>
+                        <input type="email" name="email" class="form-control" 
+                               value="<?php echo htmlspecialchars($email); ?>" required>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-full" 
+                                name="envoi_info" value="1">
+                            Mettre à jour mon profil
+                        </button>
+                        
+                        <a href="accueil.php" class="btn btn-secondary btn-full">
+                            Retour à l'accueil
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
