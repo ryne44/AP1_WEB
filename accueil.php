@@ -1,36 +1,98 @@
-
 <?php
 session_start(); 
 include '_conf.php';
 
-// Gestion de la connexion
+// Gestion de la connexion avec password_hash/password_verify
 if (isset($_POST['envoi'])) {
     $login = $_POST['login'];
-    $mdp = md5($_POST['mdp']);
+    $mdp = $_POST['mdp'];
     
-    $connexion = mysqli_connect($serveurBDD,$userBDD,$mdpBDD,$nomBDD);
-    $requete="SELECT * FROM utilisateur WHERE login = '$login' AND motdepasse = '$mdp'";
-    $resultat = mysqli_query($connexion, $requete);
-    $trouve=0;
+    $connexion = mysqli_connect($serveurBDD, $userBDD, $mdpBDD, $nomBDD);
     
-    while($donnees = mysqli_fetch_assoc($resultat)) {
-        $trouve=1;
-        $_SESSION["id"] = $donnees['num'];
-        $_SESSION["login"] = $donnees['login'];
-        $_SESSION["type"] = $donnees['type'];
-        $_SESSION["prenom"] = $donnees['prenom'];
-        $_SESSION["nom"] = $donnees['nom'];
-    }
+    // Requête préparée pour éviter les injections SQL
+    $requete = "SELECT * FROM utilisateur WHERE login = ? LIMIT 1";
+    $stmt = mysqli_prepare($connexion, $requete);
     
-    if($trouve==0) {
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "s", $login);
+        mysqli_stmt_execute($stmt);
+        $resultat = mysqli_stmt_get_result($stmt);
+        
+        if($donnees = mysqli_fetch_assoc($resultat)) {
+            // VÉRIFICATION AVEC PASSWORD_VERIFY
+            if(password_verify($mdp, $donnees['motdepasse'])) {
+                $trouve = 1;
+                $_SESSION["id"] = $donnees['num'];
+                $_SESSION["login"] = $donnees['login'];
+                $_SESSION["type"] = $donnees['type'];
+                $_SESSION["prenom"] = $donnees['prenom'];
+                $_SESSION["nom"] = $donnees['nom'];
+                
+                // Redirection pour éviter le renvoi du formulaire
+                header("Location: accueil.php");
+                exit();
+            }
+        }
+        
+        mysqli_stmt_close($stmt);
+        
+        // Si on arrive ici, c'est que la connexion a échoué
         $error_message = "Erreur de connexion : login ou mot de passe incorrect.";
+    } else {
+        $error_message = "Erreur technique. Veuillez réessayer.";
     }
+    
+    mysqli_close($connexion);
 }
 
 // Vérification de la session
 if (!isset($_SESSION["login"])) {
-    header("Location: index.php");
-    exit();
+    // Si pas connecté, rediriger vers index.php pour le formulaire de connexion
+    // Mais d'abord, afficher le formulaire de connexion
+    ?>
+    <!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Suivi Stages</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/connexion.css">
+</head>
+<body class="connexion-body">
+    <div class="login-container">
+        <div class="login-header">
+            <h1>Suivi des Stages</h1>
+            <p>Connexion à votre espace</p>
+        </div>
+        
+        <?php if (isset($error_message)): ?>
+            <div class="message error"><?php echo $error_message; ?></div>
+        <?php endif; ?>
+        
+        <form action="accueil.php" method="post" class="form-container">
+            <div class="form-group">
+                <label class="form-label">Login :</label>
+                <input type="text" name="login" class="form-control" placeholder="Entrez votre login" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Mot de passe :</label>
+                <input type="password" name="mdp" class="form-control" placeholder="Entrez votre mot de passe" required>
+            </div>
+            
+            <button type="submit" class="btn-submit" name="envoi" value="1">Se connecter</button>
+            
+            <div class="login-links">
+                <a href="inscription.php">Créer un compte</a> | 
+                <a href="oubli.php">Mot de passe oublié ?</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
+    <?php
+    exit(); // Arrêter ici pour ne pas montrer la page d'accueil
 }
 ?>
 <!DOCTYPE html>

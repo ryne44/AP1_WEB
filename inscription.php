@@ -17,26 +17,26 @@ if (isset($_POST['inscription'])) {
         $tel = mysqli_real_escape_string($connexion, $_POST['tel']);
         $login = mysqli_real_escape_string($connexion, $_POST['login']);
         $email = mysqli_real_escape_string($connexion, $_POST['email']);
-        $mdp = md5($_POST['mdp']);
-        $confirmation_mdp = md5($_POST['confirmation_mdp']);
+        $mdp = password_hash($_POST['mdp'], PASSWORD_DEFAULT);
+        $confirmation_mdp = $_POST['confirmation_mdp']; //modifie
         
         // Récupération du type de compte (élève ou prof)
         $type_compte = $_POST['type_compte'];
         if ($type_compte == 'prof') {
             $type = 1;  // Professeur
-            $option = 0; // Option PROF
+            $option = 0; // Option ELEVE (Note: option et type sont inversés dans la BD)
         } else {
             $type = 0;  // Élève
-            $option = 1; // Option ELEVE
+            $option = 1; // Option PROF (Note: option et type sont inversés dans la BD)
         }
 
-        // Vérification des mots de passe
-        if ($mdp !== $confirmation_mdp) {
-            $erreur = "Les mots de passe ne correspondent pas";
-        } else {
-            // Vérifier si le login existe déjà
-            $requete_check = "SELECT * FROM utilisateur WHERE login = '$login' OR email = '$email'";
-            $resultat_check = mysqli_query($connexion, $requete_check);
+      // Vérification des mots de passe
+if ($_POST['mdp'] !== $_POST['confirmation_mdp']) {
+     $erreur = "Les mots de passe ne correspondent pas";
+} else {
+     // Le mot de passe est déjà hashé dans $mdp
+     // ... reste du code ...
+}
             
             if (mysqli_num_rows($resultat_check) > 0) {
                 $erreur = "Ce login ou cet email est déjà utilisé";

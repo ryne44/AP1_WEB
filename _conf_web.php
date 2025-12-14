@@ -1,6 +1,6 @@
 <?php
 $serveurBDD="localhost";
-$userBDD="u937355202_prof";
-$mdpBDD="|L+Ov69k#9He";
-$nomBDD="u937355202_hayarbdd";
+$userBDD="u482683110_26HAYAR";
+$mdpBDD="C6hay24?";
+$nomBDD="u482683110_HAYAR_BDD";
 ?>

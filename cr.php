@@ -44,6 +44,22 @@ if (isset($_POST['update'])) {
         $message_class = 'success';
     }
 }
+
+if (isset($_POST['delete'])) {
+    $idCR = $_POST["idCR"];
+    $id = $_SESSION["id"];
+    
+    $connexion = mysqli_connect($serveurBDD, $userBDD, $mdpBDD, $nomBDD);
+    $requete = "DELETE FROM cr WHERE num = $idCR AND num_utilisateur = $id";
+    
+    if(!mysqli_query($connexion, $requete)) {
+        $message = "Erreur lors de la suppression du compte-rendu";
+        $message_class = 'error';
+    } else {
+        $message = "Compte-rendu supprimé avec succès";
+        $message_class = 'success';
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -112,6 +128,10 @@ if (isset($_POST['update'])) {
                     if ($_SESSION["type"] == 0) {
                         echo "<td class='table-actions'>";
                         echo "<a href='ccr.php?id=" . $donnees['num'] . "' class='action-btn edit-btn'>Modifier</a>";
+                        echo "<form method='post' style='margin: 0;'>";
+                        echo "<input type='hidden' name='idCR' value='" . $donnees['num'] . "'>";
+                        echo "<button type='submit' name='delete' class='action-btn delete-btn' onclick=\"return confirm('Êtes-vous sûr de vouloir supprimer ce compte-rendu ?');\">Supprimer</button>";
+                        echo "</form>";
                         echo "</td>";
                     }
                     echo "</tr>";

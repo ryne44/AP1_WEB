@@ -1,4 +1,3 @@
-
 <?php
 session_start(); 
 include '_conf.php';
@@ -11,24 +10,22 @@ if (!isset($_SESSION["login"])) {
 $message = '';
 $message_type = '';
 
+$id = $_SESSION["id"];
+$connexion = mysqli_connect($serveurBDD,$userBDD,$mdpBDD,$nomBDD);
+
+// Traitement de la mise à jour des informations personnelles
 if (isset($_POST['envoi_info'])) {
     $nom = $_POST['nom'];
     $prenom = $_POST['prenom'];
     $tel = $_POST['tel'];
     $login = $_POST['login'];
     $email = $_POST['email'];
-    $id = $_SESSION['id'];
     
-    $connexion = mysqli_connect($serveurBDD,$userBDD,$mdpBDD,$nomBDD);
-    $requete = "UPDATE utilisateur SET 
-                nom = '$nom', 
-                prenom = '$prenom', 
-                tel = '$tel', 
-                login = '$login', 
-                email = '$email' 
-                WHERE num = $id";
+    // Utilisation de requête préparée pour éviter les injections SQL
+    $requete = $connexion->prepare("UPDATE utilisateur SET nom=?, prenom=?, tel=?, login=?, email=? WHERE num=?");
+    $requete->bind_param("sssssi", $nom, $prenom, $tel, $login, $email, $id);
     
-    if(mysqli_query($connexion,$requete)) {
+    if($requete->execute()) {
         $message = "Votre profil a été mis à jour avec succès.";
         $message_type = 'success';
         $_SESSION["prenom"] = $prenom;
@@ -37,19 +34,65 @@ if (isset($_POST['envoi_info'])) {
         $message = "Erreur lors de la mise à jour de votre profil.";
         $message_type = 'error';
     }
+    $requete->close();
 }
 
-$id = $_SESSION["id"];
-$connexion = mysqli_connect($serveurBDD,$userBDD,$mdpBDD,$nomBDD);
-$requete = "SELECT * FROM utilisateur WHERE num = '$id'";
-$resultat = mysqli_query($connexion, $requete);
-$donnees = mysqli_fetch_assoc($resultat);
+// Traitement du changement de mot de passe
+if (isset($_POST['changer_mdp'])) {
+    $ancien_mdp = $_POST['ancien_mdp'];
+    $nouveau_mdp = $_POST['nouveau_mdp'];
+    $confirmer_mdp = $_POST['confirmer_mdp'];
+    
+    if ($nouveau_mdp !== $confirmer_mdp) {
+        $message = "Les nouveaux mots de passe ne correspondent pas.";
+        $message_type = 'error';
+    } else {
+        // Récupérer le mot de passe actuel hashé
+        $req = $connexion->prepare("SELECT motdepasse FROM utilisateur WHERE num=?");
+        $req->bind_param("i", $id);
+        $req->execute();
+        $req->store_result();
+        $req->bind_result($motdepasse_hash);
+        $req->fetch();
+        $req->close();
+        
+        if (password_verify($ancien_mdp, $motdepasse_hash)) {
+            // Hacher le nouveau mot de passe
+            $nouveau_mdp_hash = password_hash($nouveau_mdp, PASSWORD_DEFAULT);
+            
+            $update_req = $connexion->prepare("UPDATE utilisateur SET motdepasse=? WHERE num=?");
+            $update_req->bind_param("si", $nouveau_mdp_hash, $id);
+            
+            if ($update_req->execute()) {
+                $message = "Votre mot de passe a été changé avec succès.";
+                $message_type = 'success';
+            } else {
+                $message = "Erreur lors du changement de mot de passe.";
+                $message_type = 'error';
+            }
+            $update_req->close();
+        } else {
+            $message = "L'ancien mot de passe est incorrect.";
+            $message_type = 'error';
+        }
+    }
+}
+
+// Récupérer les informations actuelles de l'utilisateur
+$requete = $connexion->prepare("SELECT * FROM utilisateur WHERE num = ?");
+$requete->bind_param("i", $id);
+$requete->execute();
+$resultat = $requete->get_result();
+$donnees = $resultat->fetch_assoc();
+$requete->close();
 
 $nom = $donnees['nom'];
 $prenom = $donnees['prenom'];
 $tel = $donnees['tel'];
 $login = $donnees['login'];
 $email = $donnees['email'];
+
+mysqli_close($connexion);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -75,17 +118,17 @@ $email = $donnees['email'];
         <?php endif; ?>
         
         <div class="content-center">
+            <?php if ($message): ?>
+                <div class="alert alert-<?php echo $message_type; ?>">
+                    <?php echo $message; ?>
+                </div>
+            <?php endif; ?>
+            
             <div class="form-card">
                 <div class="form-header">
-                    <h1>Mon profil</h1>
+                    <h1>Mes informations personnelles</h1>
                     <p>Modifiez vos informations personnelles</p>
                 </div>
-                
-                <?php if ($message): ?>
-                    <div class="alert alert-<?php echo $message_type; ?>">
-                        <?php echo $message; ?>
-                    </div>
-                <?php endif; ?>
                 
                 <form action="perso.php" method="post">
                     <div class="form-group">
@@ -122,14 +165,47 @@ $email = $donnees['email'];
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary btn-full" 
                                 name="envoi_info" value="1">
-                            Mettre à jour mon profil
+                            Mettre à jour mes informations
                         </button>
-                        
-                        <a href="accueil.php" class="btn btn-secondary btn-full">
-                            Retour à l'accueil
-                        </a>
                     </div>
                 </form>
+            </div>
+
+            <div class="form-card" style="margin-top: 30px;">
+                <div class="form-header">
+                    <h2>Changer mon mot de passe</h2>
+                    <p>Pour changer votre mot de passe, veuillez remplir les champs ci-dessous</p>
+                </div>
+                
+                <form action="perso.php" method="post">
+                    <div class="form-group">
+                        <label class="form-label">Ancien mot de passe :</label>
+                        <input type="password" name="ancien_mdp" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Nouveau mot de passe :</label>
+                        <input type="password" name="nouveau_mdp" class="form-control" required minlength="4">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Confirmer le nouveau mot de passe :</label>
+                        <input type="password" name="confirmer_mdp" class="form-control" required minlength="4">
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-full" 
+                                name="changer_mdp" value="1">
+                            Changer mon mot de passe
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="accueil.php" class="btn btn-secondary">
+                    Retour à l'accueil
+                </a>
             </div>
         </div>
     </div>
